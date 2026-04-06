@@ -1,75 +1,100 @@
-Core Features and Overview
+# AWS Cognito Security Overview
 
-AWS Cognito is a Managed Identity Provider (IdP) that handles Authentication (AuthN) and Authorization (AuthZ) for applications in AWS. 
+## Core Features and Overview
 
-It is designed to scale to millions of users and offload the complexity of secure credential storage and identity federation from the developer. It supports various different sign-in options like Apple, Facebook, or Google, and enterprise directories including SAML 2.0. 
+AWS Cognito is a **Managed Identity Provider (IdP)** that handles **Authentication (AuthN)** and **Authorization (AuthZ)** for applications in AWS.
 
-It uses User Pools for sign in, and then identity pools to grant temporary access to aws services. 
+It is designed to scale to millions of users and offload the complexity of secure credential storage and identity federation from the developer. It supports various sign-in options like Apple, Facebook, or Google, and enterprise directories including SAML 2.0.
 
-Potential Targets and Areas of Interest for Attackers
+- **User Pools** — handle user sign-in
+- **Identity Pools** — grant temporary access to AWS services
 
-- The front end of the application.
+---
 
-Attackers can scrape the applications public code. If developers hardcode the UserPoolID, or IdentityPoolID in the javascript, the attackers can bypass the website, and directly start interacting with internal AWS service APIs with their own script. 
+## Potential Targets and Areas of Interest for Attackers
 
-- JWT token
-Once a user logs in using aws cognito service, the service will assign the user JWT token. This token is what tells the application who you are, and what you are allowed to do.
+### 1. Front-End of the Application
+Attackers can scrape an application's public code. If developers hardcode the `UserPoolID` or `IdentityPoolID` in JavaScript, attackers can bypass the website and directly interact with internal AWS service APIs using their own scripts.
 
-Attackers can look into the token details, and look for their given role, and can change the role. If the backend does not properly validate the JWT signature, an attacker could forge or modify the roles or permissions and gain unauthorized access.
+### 2. JWT Token
+Once a user logs in via AWS Cognito, the service assigns a JWT token that defines who the user is and what they are allowed to do.
 
-- App user to AWS user
+Attackers can inspect the token, identify the assigned role, and attempt to modify it. If the backend does not properly validate the JWT signature, an attacker could forge or alter roles/permissions to gain unauthorized access.
 
-Attackers can target the moment the app exchanges the cognito token for temporary aws credentionals/token. They can look at the permissions (IAM Policy) attached to those credentials. 
+### 3. App User to AWS User (Token Exchange)
+Attackers can target the moment an app exchanges a Cognito token for temporary AWS credentials. They can inspect the IAM policy attached to those credentials.
 
-The attacker would login normally but can use the browser console to catch any potential aws secret keys that the identity pool sends. Then the attacker can use those to plug them into his own terminal and exploit it. 
+An attacker may log in normally and use the browser console to capture any AWS secret keys sent by the identity pool — then use those keys in their own terminal to exploit access.
 
+---
 
-Top 5 security Misconfigurations:
+## Top 5 Security Misconfigurations
 
-1.Over-Privileged IAM Roles for Authenticated Users
+### 1. Over-Privileged IAM Roles for Authenticated Users
 
-Description: Identity Pools assign an IAM role to logged-in users. A common mistake is attaching a policy with broad permissions (full s3 bucket) rather than restricting access
+**Description:**
+Identity Pools assign an IAM role to logged-in users. A common mistake is attaching a policy with overly broad permissions (e.g., full S3 access) instead of scoping them appropriately.
 
-Attack Scenario: An attacker can create a legitimate account, steal their own temporary AWS keys from the browser, and use the AWS CLI to download sensitive data from other users' S3 buckets.
+**Attack Scenario:**
+An attacker creates a legitimate account, captures their own temporary AWS keys from the browser, and uses the AWS CLI to access sensitive data from other users' S3 buckets.
 
-Remediation: Use IAM Policy Variables (e.g., ${cognito-identity.amazonaws.com:sub}) to ensure users can only access resources matching their specific Identity ID.
+**Remediation:**
+Use IAM Policy Variables such as `${cognito-identity.amazonaws.com:sub}` to ensure users can only access resources tied to their specific Identity ID.
 
-2. Disabled or Optional Multi-Factor Authentication (MFA)
-Description: MFA is often left as "Optional" by default, making the pool vulnerable to credential stuffing.
+---
 
-Attack Scenario: An attacker uses leaked passwords from an unrelated breach to log into a user's account. Because MFA isn't required, they gain immediate access to the user's data and AWS credentials.
+### 2. Disabled or Optional Multi-Factor Authentication (MFA)
 
-Remediation: Set MFA to "Required" and prioritize TOTP (Authenticator apps) over SMS.
+**Description:**
+MFA is often left as "Optional" by default, leaving the pool vulnerable to credential stuffing attacks.
 
-3. User Enumeration Enabled
+**Attack Scenario:**
+An attacker uses leaked passwords from an unrelated breach to log into a user's account. Because MFA is not required, they gain immediate access to the user's data and AWS credentials.
 
-Description:
-Cognito may return different error messages depending on whether a user exists. If PreventUserExistenceErrors is not enabled, attackers can determine valid usernames.
+**Remediation:**
+Set MFA to **Required** and prioritize TOTP (authenticator apps) over SMS-based verification.
 
-Attack Scenario:
-An attacker sends login or password reset requests with different usernames. By analyzing error responses, they can identify which accounts exist and then target those accounts with brute-force or phishing attacks.
+---
 
-Remediation:
-Enable PreventUserExistenceErrors in Cognito settings to ensure uniform error responses regardless of whether a user exists.
+### 3. User Enumeration Enabled
 
-4. Overly Permissive Auth Flows
+**Description:**
+Cognito may return different error messages depending on whether a user exists. If `PreventUserExistenceErrors` is not enabled, attackers can identify valid usernames.
 
-Description:
-Cognito App Clients support multiple authentication flows. Enabling insecure flows such as ALLOW_ADMIN_NO_SRP_AUTH or ALLOW_USER_PASSWORD_AUTH can bypass more secure mechanisms like SRP (Secure Remote Password protocol).
+**Attack Scenario:**
+An attacker sends login or password reset requests with different usernames and analyzes the error responses to determine which accounts exist — then targets them with brute-force or phishing attacks.
 
-Attack Scenario:
-An attacker exploits a weaker authentication flow that allows direct transmission of credentials instead of using SRP. This increases the risk of credential interception or misuse, especially in improperly secured environments.
+**Remediation:**
+Enable `PreventUserExistenceErrors` in Cognito settings to ensure uniform error responses regardless of whether a user exists.
 
-Remediation:
-Disable insecure authentication flows and only allow secure ones such as ALLOW_USER_SRP_AUTH and ALLOW_REFRESH_TOKEN_AUTH. Follow AWS best practices for secure authentication mechanisms.
+---
 
-5. Weak Password Policy
+### 4. Overly Permissive Auth Flows
 
-Description:
-Cognito User Pools allow customization of password policies. A common misconfiguration is enforcing weak password requirements, such as short minimum length or lack of complexity,, which reduces resistance to brute-force and credential stuffing attacks.
+**Description:**
+Cognito App Clients support multiple authentication flows. Enabling insecure flows such as `ALLOW_ADMIN_NO_SRP_AUTH` or `ALLOW_USER_PASSWORD_AUTH` can bypass more secure mechanisms like SRP (Secure Remote Password protocol).
 
-Attack Scenario:
-An attacker performs credential stuffing using leaked passwords from other breaches. Because the application allows weak passwords, users are more likely to reuse simple credentials, increasing the likelihood of successful account compromise.
+**Attack Scenario:**
+An attacker exploits a weaker authentication flow that transmits credentials directly instead of using SRP, increasing the risk of credential interception or misuse.
 
-Remediation:
-Enforce a strong password policy requiring a minimum length (e.g., 12+ characters) and a combination of uppercase letters, lowercase letters, numbers, and special characters. Regularly review and update password policies to align with AWS security best practices.
+**Remediation:**
+Disable insecure authentication flows and only allow secure ones such as `ALLOW_USER_SRP_AUTH` and `ALLOW_REFRESH_TOKEN_AUTH`. Follow AWS best practices for secure authentication mechanisms.
+
+---
+
+### 5. Weak Password Policy
+
+**Description:**
+Cognito User Pools allow customization of password policies. Enforcing weak requirements — such as a short minimum length or no complexity rules — reduces resistance to brute-force and credential stuffing attacks.
+
+**Attack Scenario:**
+An attacker performs credential stuffing using leaked passwords from other breaches. Because the application allows weak passwords, users are more likely to reuse simple credentials, increasing the chance of a successful account compromise.
+
+**Remediation:**
+Enforce a strong password policy requiring:
+- Minimum **12+ characters**
+- Uppercase and lowercase letters
+- Numbers
+- Special characters
+
+Regularly review and update password policies to align with AWS security best practices.
