@@ -24,7 +24,7 @@ Attackers can target the moment the app exchanges the cognito token for temporar
 The attacker would login normally but can use the browser console to catch any potential aws secret keys that the identity pool sends. Then the attacker can use those to plug them into his own terminal and exploit it. 
 
 
-Top 4 security Misconfigurations:
+Top 5 security Misconfigurations:
 
 1.Over-Privileged IAM Roles for Authenticated Users
 
@@ -62,7 +62,9 @@ An attacker exploits a weaker authentication flow that allows direct transmissio
 
 Remediation:
 Disable insecure authentication flows and only allow secure ones such as ALLOW_USER_SRP_AUTH and ALLOW_REFRESH_TOKEN_AUTH. Follow AWS best practices for secure authentication mechanisms.
+
 5. Weak Password Policy
+
 Description:
 Cognito User Pools allow customization of password policies. A common misconfiguration is enforcing weak password requirements, such as short minimum length or lack of complexity,, which reduces resistance to brute-force and credential stuffing attacks.
 Attack Scenario:
