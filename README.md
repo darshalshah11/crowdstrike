@@ -67,8 +67,10 @@ Disable insecure authentication flows and only allow secure ones such as ALLOW_U
 
 Description:
 Cognito User Pools allow customization of password policies. A common misconfiguration is enforcing weak password requirements, such as short minimum length or lack of complexity,, which reduces resistance to brute-force and credential stuffing attacks.
+
 Attack Scenario:
 An attacker performs credential stuffing using leaked passwords from other breaches. Because the application allows weak passwords, users are more likely to reuse simple credentials, increasing the likelihood of successful account compromise.
+
 Remediation:
 Enforce a strong password policy requiring a minimum length (e.g., 12+ characters) and a combination of uppercase letters, lowercase letters, numbers, and special characters. Regularly review and update password policies to align with AWS security best practices.
 
